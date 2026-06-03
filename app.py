@@ -29,6 +29,7 @@ from utils.money_score import calculate_money_score
 from utils.multi_agent import run_multi_agent
 from utils.stock import get_stock_price
 from utils.expense_track import calculate_expense, insights
+from utils import persistence
 
 app = Flask(__name__)
 
@@ -219,22 +220,27 @@ def money_score():
         return jsonify({"error": str(e)})
 
 
-# Expense Tracker Features
+# ---------------- EXPENSE TRACKER ----------------
 
 @app.route("/add_expense", methods=["POST"])
 def add_expense():
     try:
         data = request.json
+        if not data or "category" not in data or "amount" not in data or "date" not in data:
+            return jsonify({"error": "category, amount, and date are required"}), 400
+
+        print("RECEIVED:", data)
+
         expense = Expense(
-            category=data["category"],
+            category=str(data["category"]).strip(),
             amount=float(data["amount"]),
-            date=data["date"]
+            date=str(data["date"]).strip()
         )
         db.session.add(expense)
         db.session.commit()
         return jsonify({"status": "success"})
-
     except Exception as e:
+        print("ERROR:", str(e))
         return jsonify({"error": str(e)}), 400
 
 @app.route("/calculate", methods=["GET"])
@@ -244,15 +250,15 @@ def calculate():
     result["expenses"] = expense_data
     return jsonify(result)
 
+
 @app.route("/insights", methods=["GET"])
 def expense_insights():
     expense_data = [e.to_dict() for e in Expense.query.order_by(Expense.id).all()]
-    result =insights(client,expense_data)
+    result = insights(client, expense_data)
     return jsonify(result)
 
-# ---------------- NET WORTH TRACKER ----------------
-# Net Worth Tracker Features
 
+# ---------------- NET WORTH TRACKER ----------------
 @app.route("/net-worth", methods=["GET", "POST"])
 def get_net_worth():
     assets = Asset.query.order_by(Asset.id).all()
@@ -266,37 +272,49 @@ def get_net_worth():
         "liabilities": liabilities_data,
         "total_assets": total_assets,
         "total_liabilities": total_liabilities,
-        "net_worth": total_assets - total_liabilities
+        "net_worth": total_assets - total_liabilities,
     })
+
 
 @app.route("/add-asset", methods=["POST"])
 def add_asset():
     try:
         data = request.json
-        asset = Asset(name=data["name"], amount=float(data["amount"]))
+        if not data or "name" not in data or "amount" not in data:
+            return jsonify({"error": "name and amount are required"}), 400
+        asset = Asset(name=str(data["name"]).strip(), amount=float(data["amount"]))
         db.session.add(asset)
         db.session.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+
 @app.route("/add-liability", methods=["POST"])
 def add_liability():
     try:
         data = request.json
-        liability = Liability(name=data["name"], amount=float(data["amount"]))
+        if not data or "name" not in data or "amount" not in data:
+            return jsonify({"error": "name and amount are required"}), 400
+        liability = Liability(name=str(data["name"]).strip(), amount=float(data["amount"]))
         db.session.add(liability)
         db.session.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+
 @app.route("/delete-item", methods=["POST"])
 def delete_item():
+    """Delete an asset or liability by its stable id (NOT list index).
+
+    Previously this used list.pop(index) which silently corrupted
+    all subsequent indices after the first deletion.
+    """
     try:
         data = request.json
-        item_type = data["type"] # 'asset' or 'liability'
-        item_id = int(data["id"]) # positional index from the frontend
+        item_type = data.get("type") # 'asset' or 'liability'
+        item_id = int(data.get("id")) # positional index from the frontend
 
         if item_type == 'asset':
             rows = Asset.query.order_by(Asset.id).all()
@@ -307,8 +325,11 @@ def delete_item():
 
         db.session.commit()
         return jsonify({"status": "success"})
+    except KeyError as e:
+        return jsonify({"error": str(e)}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
