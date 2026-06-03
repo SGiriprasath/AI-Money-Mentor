@@ -1,15 +1,26 @@
 from flask import Flask, request, jsonify, render_template
-import yfinance as yf 
+import yfinance as yf
 import os
+import sys
 from groq import Groq
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables from .env file (if present)
 load_dotenv()
 
-# Set default API key ONLY if not already defined in environment
-if not os.getenv("GROQ_API_KEY"):
-    os.environ["GROQ_API_KEY"] = "YOUR_API_KEY"
+# ── Startup validation ───────────────────────────────────────
+# Fail fast and clearly if the required API key is missing.
+# Copy .env.example → .env and set your GROQ_API_KEY.
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+if not GROQ_API_KEY or GROQ_API_KEY.strip() in ("", "your_groq_api_key_here"):
+    print(
+        "\n[ERROR] GROQ_API_KEY is not configured.\n"
+        "  1. Copy .env.example to .env\n"
+        "  2. Set your GROQ_API_KEY in .env\n"
+        "  Obtain a free key at: https://console.groq.com/\n",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 # ---------------- IMPORT UTILS ----------------
 from utils.sip import calculate_sip
 from utils.tax import calculate_tax
@@ -22,14 +33,70 @@ from utils import persistence
 
 app = Flask(__name__)
 
+# ---------------- INIT DATABASE ----------------
+from models import db, Expense, Asset, Liability
+
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///money_mentor.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db.init_app(app)
+
+with app.app_context():
+    db.create_all()
+
 # ---------------- INIT GROQ ----------------
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client = Groq(api_key=GROQ_API_KEY)
 
-
+# ── Dev-mode startup message ─────────────────────────────────
+if os.getenv("FLASK_ENV", "development") != "production":
+    print("[OK] Groq client initialised successfully.")
 # ---------------- HOME ----------------
 @app.route("/")
 def home():
     return render_template("index.html")
+
+
+# ---------------- HEALTH CHECK ----------------
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Lightweight liveness probe for deployment environments (Docker, Railway, etc.)."""
+    return jsonify({"status": "ok", "service": "AI Money Mentor"}), 200
+
+
+# ---------------- ERROR HANDLERS ----------------
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify({
+        "error": "Bad Request",
+        "message": str(error),
+        "status_code": 400
+    }), 400
+
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        "error": "Not Found",
+        "message": "The requested endpoint does not exist.",
+        "status_code": 404
+    }), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed(error):
+    return jsonify({
+        "error": "Method Not Allowed",
+        "message": str(error),
+        "status_code": 405
+    }), 405
+
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    return jsonify({
+        "error": "Internal Server Error",
+        "message": "An unexpected error occurred. Please try again later.",
+        "status_code": 500
+    }), 500
 
 
 # ---------------- 🤖 AI CHAT ----------------
@@ -46,10 +113,16 @@ def chat():
             ]
         )
 
-        return jsonify({"reply": res.choices[0].message.content})
+        return jsonify({
+            "reply": res.choices[0].message.content
+        })
 
     except Exception as e:
-        return jsonify({"reply": f"Error: {str(e)}"})
+    	app.logger.error(f"Groq API Error: {str(e)}")
+
+    	return jsonify({
+        	"reply": "Unable to generate a response at the moment. Please try again later."
+    	}), 500
 
 
 # ---------------- 💸 SIP ----------------
@@ -156,25 +229,23 @@ def add_expense():
         if not data or "category" not in data or "amount" not in data or "date" not in data:
             return jsonify({"error": "category, amount, and date are required"}), 400
 
-        print("RECEIVED:", data)   # ADD THIS
+        print("RECEIVED:", data)
 
-        expense = {
-            "category": str(data["category"]).strip(),
-            "amount": float(data["amount"]),
-            "date": str(data["date"]).strip(),
-        }
-        expense_data = persistence.append_item("expenses", expense)
-
-        print("ALL EXPENSES:", expense_data)   # ADD THIS
-
+        expense = Expense(
+            category=str(data["category"]).strip(),
+            amount=float(data["amount"]),
+            date=str(data["date"]).strip()
+        )
+        db.session.add(expense)
+        db.session.commit()
         return jsonify({"status": "success"})
     except Exception as e:
-        print("ERROR:", str(e))   # ADD THIS
+        print("ERROR:", str(e))
         return jsonify({"error": str(e)}), 400
 
 @app.route("/calculate", methods=["GET"])
 def calculate():
-    expense_data = persistence.load("expenses")
+    expense_data = [e.to_dict() for e in Expense.query.order_by(Expense.id).all()]
     result = calculate_expense(expense_data)
     result["expenses"] = expense_data
     return jsonify(result)
@@ -182,19 +253,20 @@ def calculate():
 
 @app.route("/insights", methods=["GET"])
 def expense_insights():
-    expense_data = persistence.load("expenses")
+    expense_data = [e.to_dict() for e in Expense.query.order_by(Expense.id).all()]
     result = insights(client, expense_data)
     return jsonify(result)
 
 
 # ---------------- NET WORTH TRACKER ----------------
-
 @app.route("/net-worth", methods=["GET", "POST"])
 def get_net_worth():
-    assets_data = persistence.load("assets")
-    liabilities_data = persistence.load("liabilities")
-    total_assets = sum(item["amount"] for item in assets_data)
-    total_liabilities = sum(item["amount"] for item in liabilities_data)
+    assets = Asset.query.order_by(Asset.id).all()
+    liabilities = Liability.query.order_by(Liability.id).all()
+    assets_data = [a.to_dict(i) for i, a in enumerate(assets)]
+    liabilities_data = [l.to_dict(i) for i, l in enumerate(liabilities)]
+    total_assets = sum(item['amount'] for item in assets_data)
+    total_liabilities = sum(item['amount'] for item in liabilities_data)
     return jsonify({
         "assets": assets_data,
         "liabilities": liabilities_data,
@@ -210,10 +282,9 @@ def add_asset():
         data = request.json
         if not data or "name" not in data or "amount" not in data:
             return jsonify({"error": "name and amount are required"}), 400
-        persistence.append_item("assets", {
-            "name": str(data["name"]).strip(),
-            "amount": float(data["amount"]),
-        })
+        asset = Asset(name=str(data["name"]).strip(), amount=float(data["amount"]))
+        db.session.add(asset)
+        db.session.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -225,10 +296,9 @@ def add_liability():
         data = request.json
         if not data or "name" not in data or "amount" not in data:
             return jsonify({"error": "name and amount are required"}), 400
-        persistence.append_item("liabilities", {
-            "name": str(data["name"]).strip(),
-            "amount": float(data["amount"]),
-        })
+        liability = Liability(name=str(data["name"]).strip(), amount=float(data["amount"]))
+        db.session.add(liability)
+        db.session.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -243,11 +313,17 @@ def delete_item():
     """
     try:
         data = request.json
-        item_type = data.get("type")   # 'asset' or 'liability'
-        item_id = int(data.get("id"))
+        item_type = data.get("type") # 'asset' or 'liability'
+        item_id = int(data.get("id")) # positional index from the frontend
 
-        store = "assets" if item_type == "asset" else "liabilities"
-        persistence.delete_item(store, item_id)
+        if item_type == 'asset':
+            rows = Asset.query.order_by(Asset.id).all()
+            db.session.delete(rows[item_id])
+        else:
+            rows = Liability.query.order_by(Liability.id).all()
+            db.session.delete(rows[item_id])
+
+        db.session.commit()
         return jsonify({"status": "success"})
     except KeyError as e:
         return jsonify({"error": str(e)}), 404

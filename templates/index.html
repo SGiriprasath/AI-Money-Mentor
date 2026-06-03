@@ -25,6 +25,23 @@
       --border: rgba(255, 255, 255, 0.06);
       --glow: rgba(212, 168, 67, 0.18);
     }
+    body.light-theme {
+  --bg: #f4f6f9;
+  --bg2: #ffffff;
+  --bg3: #e8edf3;
+
+  --text: #1f2937;
+  --muted: #6b7280;
+
+  --border: rgba(0,0,0,0.08);
+
+  --gold: #d4a843;
+  --gold2: #f0cc6e;
+
+  --teal: #14c8bf;
+  --red: #e05252;
+  --green: #2ecc8a;
+}
 
     *,
     *::before,
@@ -1144,6 +1161,50 @@
         font-size: 22px;
       }
 
+      .page-title {
+        font-size: 18px;
+      }
+    }
+    body.light-theme .sidebar {
+  background: #ffffff;
+  border-right: 1px solid rgba(0,0,0,0.08);
+}
+
+body.light-theme .card {
+  background: #ffffff;
+  color: var(--text);
+}
+
+body.light-theme .stat-card {
+  background: #ffffff;
+}
+
+body.light-theme .chat-messages {
+  background: #f9fafb;
+}
+
+body.light-theme .msg.bot {
+  background: #ffffff;
+}
+
+body.light-theme input,
+body.light-theme textarea,
+body.light-theme select {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+}
+
+body.light-theme {
+  background: #f4f6f9;
+}
+
+body.light-theme::before {
+  background:
+    radial-gradient(circle at 16% 16%, rgba(20,200,191,0.08), transparent 18%),
+    radial-gradient(circle at 88% 12%, rgba(212,168,67,0.08), transparent 14%);
+}
+
   .page-title {
     font-size: 18px;
   }
@@ -1385,6 +1446,13 @@ pointer;
   <!-- ══════════ SIDEBAR ══════════ -->
   <div class="sidebar">
     <div class="logo">₹ Money Mentor</div>
+    <button
+       class="btn btn-ghost"
+       id="themeToggle"
+       onclick="toggleTheme()"
+       style="margin-bottom:15px;width:100%;">
+       ☀️ Light Mode
+    </button>
 
     <div class="nav-item active" data-page="dashboard"><span class="icon">🏠</span> Dashboard</div>
     <div class="nav-item" data-page="chat"><span class="icon">🤖</span> AI Chat</div>
@@ -1594,12 +1662,12 @@ pointer;
         <div class="card">
           <div class="card-title">Enter your financial details</div>
           <div class="form-grid">
-            <div><label>Monthly Income (₹)</label><input type="number" id="s_income" placeholder="e.g. 80000"></div>
-            <div><label>Monthly Expenses (₹)</label><input type="number" id="s_expenses" placeholder="e.g. 40000"></div>
-            <div><label>Monthly Savings (₹)</label><input type="number" id="s_savings" placeholder="e.g. 20000"></div>
-            <div><label>Investments (₹)</label><input type="number" id="s_invest" placeholder="e.g. 500000"></div>
-            <div><label>Total Debt (₹)</label><input type="number" id="s_debt" placeholder="e.g. 100000"></div>
-            <div><label>Emergency Fund (₹)</label><input type="number" id="s_emergency" placeholder="e.g. 240000"></div>
+            <div><label>Monthly Income (₹)</label><input type="number" required min="0" id="s_income" placeholder="e.g. 80000"></div>
+            <div><label>Monthly Expenses (₹)</label><input type="number" required min="0" id="s_expenses" placeholder="e.g. 40000"></div>
+            <div><label>Monthly Savings (₹)</label><input type="number" required min="0" id="s_savings" placeholder="e.g. 20000"></div>
+            <div><label>Investments (₹)</label><input type="number" required min="0" id="s_invest" placeholder="e.g. 500000"></div>
+            <div><label>Total Debt (₹)</label><input type="number" required min="0" id="s_debt" placeholder="e.g. 100000"></div>
+            <div><label>Emergency Fund (₹)</label><input type="number" required min="0" id="s_emergency" placeholder="e.g. 240000"></div>
           </div>
           <button class="btn btn-gold" style="margin-top:16px;width:100%" onclick="calcScore()" id="scoreBtn">Calculate
             Money Score</button>
@@ -1620,13 +1688,13 @@ pointer;
       <div class="card-title">SIP Projection</div>
 
       <label>Monthly Investment (₹)</label>
-      <input type="number" id="sip_monthly" placeholder="e.g. 10000">
+      <input type="number" required min="0" id="sip_monthly" placeholder="e.g. 10000">
 
       <label>Annual Return Rate (%)</label>
-      <input type="number" id="sip_rate" placeholder="e.g. 12">
+      <input type="number" required min="0" id="sip_rate" placeholder="e.g. 12">
 
       <label>Investment Period (Years)</label>
-      <input type="number" id="sip_years" placeholder="e.g. 10">
+      <input type="number" required min="0" id="sip_years" placeholder="e.g. 10">
 
       <button class="btn btn-gold" style="margin-top:16px;width:100%" onclick="calcSIP()" id="sipBtn">
         Calculate
@@ -1713,7 +1781,7 @@ pointer;
                       <div class="card">
                         <div class="card-title">Income Tax Calculator</div>
                         <label>Gross Annual Income (₹)</label>
-                        <input type="number" id="taxIncome" placeholder="e.g. 1200000">
+                        <input type="number" required min="0" id="taxIncome" placeholder="e.g. 1200000">
                         <button class="btn btn-gold" style="margin-top:16px;width:100%" onclick="calcTax()"
                           id="taxBtn">Calculate
                           Tax</button>
@@ -1728,7 +1796,7 @@ pointer;
                         <div class="card" style="max-width:480px">
                           <div class="card-title">Income Tax Calculator (New Regime)</div>
                           <label>Annual Income (₹)</label>
-                          <input type="number" id="taxIncome" placeholder="e.g. 1200000">
+                          <input type="number" required min="0" id="taxIncome" placeholder="e.g. 1200000">
                           <button class="btn btn-gold" style="margin-top:16px;width:100%" onclick="calcTax()"
                             id="taxBtn">Calculate
                             Tax</button>
@@ -1799,7 +1867,7 @@ style="width:220px;"
         <option value="Shopping">Shopping</option>
         <option value="Other">Other</option>
     </select>
-        <input type="number" id="amount" placeholder="Amount (₹)" required>
+        <input type="number" required min="0" id="amount" placeholder="Amount (₹)" required>
         <input type="date" id="date" required>
         <button type="submit">Add Expense</button>
       </form>
@@ -1816,7 +1884,7 @@ style="width:220px;"
                             <option value="Shopping">Shopping</option>
                             <option value="Other">Other</option>
                           </select>
-                          <input type="number" id="amount" placeholder="Amount (₹)" required>
+                          <input type="number" required min="0" id="amount" placeholder="Amount (₹)" required>
                           <input type="date" id="date" required>
                           <button type="submit">Add Expense</button>
                         </form>
@@ -1889,7 +1957,7 @@ style="width:220px;"
                             <div class="card-title">Assets (What you own)</div>
                             <div class="chat-input-row" style="margin-bottom: 15px;">
                               <input type="text" id="assetName" placeholder="Asset name (e.g. HDFC Savings)">
-                              <input type="number" id="assetAmt" placeholder="Amount (₹)">
+                              <input type="number" required min="0" id="assetAmt" placeholder="Amount (₹)">
                               <button class="btn btn-gold" onclick="addNWItem('asset')">Add</button>
                             </div>
                             <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--text);">
@@ -1910,7 +1978,7 @@ style="width:220px;"
                             <div class="card-title">Liabilities (What you owe)</div>
                             <div class="chat-input-row" style="margin-bottom: 15px;">
                               <input type="text" id="liabName" placeholder="Liability name (e.g. Home Loan)">
-                              <input type="number" id="liabAmt" placeholder="Amount (₹)">
+                              <input type="number" required min="0" id="liabAmt" placeholder="Amount (₹)">
                               <button class="btn btn-gold" onclick="addNWItem('liability')">Add</button>
                             </div>
                             <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: var(--text);">
@@ -1937,10 +2005,24 @@ style="width:220px;"
   <!-- Loading charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+                    <!-- Scroll to Top Button -->
+                    <button id="scrollTopBtn" onclick="document.querySelector('.main').scrollTo({top: 0, behavior: 'smooth'})" style="display:none; position:fixed; bottom:30px; right:30px; z-index:100; border-radius:50%; width:44px; height:44px; font-size:20px; align-items:center; justify-content:center;" class="btn btn-gold">↑</button>
+
                     </div><!-- /main -->
 
                     <!-- Loading charts -->
                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+                    <script>
+                    // Scroll to Top visibility toggle
+                    document.querySelector('.main').addEventListener('scroll', function() {
+                      const btn = document.getElementById('scrollTopBtn');
+                      if (this.scrollTop > 300) {
+                        btn.style.display = 'flex';
+                      } else {
+                        btn.style.display = 'none';
+                      }
+                    });
 
 /* ══════════════════════════════════════════════
    GLOBAL CHART INSTANCES & HELPERS
@@ -2953,15 +3035,35 @@ try{
 
                           const assetList = document.getElementById('assetList');
                           assetList.innerHTML = '';
-                          data.assets.forEach((item, idx) => {
-                            assetList.innerHTML += `
-            <tr style="border-bottom: 1px solid var(--border);">
-              <td style="padding: 8px;">${item.name}</td>
-              <td style="padding: 8px; text-align: right;">₹${fmtNum(item.amount)}</td>
-              <td style="padding: 8px; text-align: center;"><button class="btn btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="deleteNWItem('asset', ${idx})">✖</button></td>
-            </tr>
-          `;
-                          });
+                          if (data.assets.length === 0) {
+                            assetList.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: var(--muted); font-style: italic;">No assets added yet</td></tr>';
+                          } else {
+                            data.assets.forEach((item, idx) => {
+                              assetList.innerHTML += `
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 8px;">${item.name}</td>
+                <td style="padding: 8px; text-align: right;">₹${fmtNum(item.amount)}</td>
+                <td style="padding: 8px; text-align: center;"><button class="btn btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="deleteNWItem('asset', ${idx})">✖</button></td>
+              </tr>
+            `;
+                            });
+                          }
+
+                          const liabList = document.getElementById('liabList');
+                          liabList.innerHTML = '';
+                          if (data.liabilities.length === 0) {
+                            liabList.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: var(--muted); font-style: italic;">No liabilities added yet</td></tr>';
+                          } else {
+                            data.liabilities.forEach((item, idx) => {
+                              liabList.innerHTML += `
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <td style="padding: 8px;">${item.name}</td>
+                  <td style="padding: 8px; text-align: right;">₹${fmtNum(item.amount)}</td>
+                  <td style="padding: 8px; text-align: center;"><button class="btn btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="deleteNWItem('liability', ${idx})">✖</button></td>
+                </tr>
+              `;
+                            });
+                          }
 
 loadExpenses();
 let goals = [];
@@ -3116,6 +3218,33 @@ Add Savings
 `;
 });
 
+                      // Update loadNetWorth when navigating to the page
+                      const originalShowPage = showPage;
+                      showPage = function (name, e) {
+                        originalShowPage(name, e);
+                        if (name === 'networth') loadNetWorth();
+                      };
+                      function toggleTheme() {
+                        document.body.classList.toggle("light-theme");
+                        const btn = document.getElementById("themeToggle");
+                        if(document.body.classList.contains("light-theme")) {
+                          localStorage.setItem("theme","light");
+                          btn.innerHTML = "🌙 Dark Mode";
+                        } else {
+                          localStorage.setItem("theme","dark");
+                          btn.innerHTML = "☀️ Light Mode";
+                        }
+                      }
+                      window.addEventListener("DOMContentLoaded", () => {
+                        const savedTheme = localStorage.getItem("theme");
+                        const btn = document.getElementById("themeToggle");
+                        if(savedTheme === "light") {
+                          document.body.classList.add("light-theme");
+                          btn.innerHTML = "🌙 Dark Mode";
+                        }
+                      });
+
+                    </script>
 }
   </script>
 </body>
