@@ -147,6 +147,54 @@ def portfolio():
     try:
         stock = request.json["stock"].upper()
         result = get_stock_price(stock)
+        
+        # AI Sentiment Analysis
+        sentiment = "Neutral"
+        analysis = "No recent news available to analyze."
+        
+        if "error" not in result and result.get("news"):
+            headlines = [n["title"] for n in result["news"]]
+            news_text = "\n".join([f"- {h}" for h in headlines])
+            
+            prompt = (
+                f"Analyze the market sentiment for stock ticker {stock} based on the following recent news headlines:\n"
+                f"{news_text}\n\n"
+                f"Your output must be in this exact format:\n"
+                f"SENTIMENT: [Bullish / Bearish / Neutral]\n"
+                f"EXPLANATION: [A concise 2-3 sentence summary explaining why the stock is moving based on the news, or overall outlook if news is mixed.]"
+            )
+            
+            try:
+                ai_res = client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=[
+                        {"role": "system", "content": "You are a professional stock market advisor. Be concise and accurate."},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                ai_output = ai_res.choices[0].message.content.strip()
+                
+                # Simple parsing of the formatted output
+                if "SENTIMENT:" in ai_output:
+                    parts = ai_output.split("EXPLANATION:")
+                    sent_part = parts[0].replace("SENTIMENT:", "").strip()
+                    # Clean sentiment word
+                    for option in ["Bullish", "Bearish", "Neutral"]:
+                        if option.lower() in sent_part.lower():
+                            sentiment = option
+                            break
+                    if len(parts) > 1:
+                        analysis = parts[1].strip()
+                    else:
+                        analysis = ai_output
+                else:
+                    analysis = ai_output
+            except Exception as ai_err:
+                app.logger.error(f"Stock AI Analysis Error: {str(ai_err)}")
+                analysis = "AI Sentiment Analysis is currently unavailable."
+        
+        result["sentiment"] = sentiment
+        result["analysis"] = analysis
         return jsonify(result)
 
     except Exception as e:
