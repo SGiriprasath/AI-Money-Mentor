@@ -30,6 +30,7 @@ from utils.multi_agent import run_multi_agent
 from utils.stock import get_stock_price
 from utils.expense_track import calculate_expense, insights
 from utils import persistence
+from utils.ai_categorizer import AICategorizer
 
 app = Flask(__name__)
 
@@ -46,9 +47,14 @@ with app.app_context():
 # ---------------- INIT GROQ ----------------
 client = Groq(api_key=GROQ_API_KEY)
 
+# Initialize AI Categorizer
+ai_categorizer = AICategorizer()
+
 # ── Dev-mode startup message ─────────────────────────────────
 if os.getenv("FLASK_ENV", "development") != "production":
     print("[OK] Groq client initialised successfully.")
+    print("[OK] AI Expense Categorizer loaded.")
+
 # ---------------- HOME ----------------
 @app.route("/")
 def home():
@@ -272,7 +278,201 @@ def money_score():
         return jsonify({"error": str(e)}), 400
 
 
-# ---------------- EXPENSE TRACKER ----------------
+# ---------------- 🤖 AI EXPENSE CATEGORIZATION ----------------
+
+@app.route("/categorize", methods=["POST"])
+def categorize_expense():
+    """AI endpoint to categorize an expense without saving"""
+    try:
+        data = request.json
+        description = data.get("description", "")
+        
+        if not description:
+            return jsonify({"error": "Description is required"}), 400
+        
+        result = ai_categorizer.categorize(description)
+        
+        return jsonify({
+            "success": True,
+            "description": description,
+            "predicted_category": result['category'],
+            "confidence": result['confidence'],
+            "matched_keywords": result.get('matched_categories', [])
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/add_expense_ai", methods=["POST"])
+def add_expense_ai():
+    """Add expense with AI auto-categorization"""
+    try:
+        data = request.json
+        description = data.get("description", "")
+        amount = float(data.get("amount", 0))
+        date = data.get("date", "")
+        
+        if not description or not amount:
+            return jsonify({"error": "Description and amount are required"}), 400
+        
+        # Let AI categorize
+        ai_result = ai_categorizer.categorize(description)
+        
+        expense = Expense(
+            category=ai_result['category'],
+            amount=amount,
+            date=date,
+            ai_confidence=ai_result['confidence'],
+            user_corrected=False,
+            original_ai_category=ai_result['category']
+        )
+        
+        db.session.add(expense)
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "expense_id": expense.id,
+            "ai_category": ai_result['category'],
+            "confidence": ai_result['confidence'],
+            "message": f"Expense automatically categorized as {ai_result['category']} with {ai_result['confidence']*100}% confidence"
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/correct_category", methods=["POST"])
+def correct_category():
+    """User corrects AI category - helps AI learn"""
+    try:
+        data = request.json
+        expense_id = data.get("expense_id")
+        correct_category = data.get("correct_category")
+        description = data.get("description", "")
+        
+        expense = Expense.query.get(expense_id)
+        if not expense:
+            return jsonify({"error": "Expense not found"}), 404
+        
+        # Store original before correction
+        original_category = expense.category
+        
+        # Update expense
+        expense.category = correct_category
+        expense.user_corrected = True
+        expense.original_ai_category = original_category
+        
+        # Teach AI
+        ai_categorizer.learn_from_correction(description, correct_category)
+        
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Category corrected from {original_category} to {correct_category}",
+            "ai_improved": True
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/anomaly_detection", methods=["GET"])
+def detect_anomalies():
+    """Detect unusual spending patterns"""
+    try:
+        expenses = Expense.query.all()
+        if len(expenses) < 5:
+            return jsonify({"message": "Need at least 5 expenses for anomaly detection", "anomalies": []})
+        
+        # Calculate average spending per category
+        category_totals = {}
+        category_counts = {}
+        
+        for expense in expenses:
+            cat = expense.category
+            amount = expense.amount
+            
+            if cat not in category_totals:
+                category_totals[cat] = 0
+                category_counts[cat] = 0
+            
+            category_totals[cat] += amount
+            category_counts[cat] += 1
+        
+        # Calculate averages
+        category_avg = {}
+        for cat in category_totals:
+            category_avg[cat] = category_totals[cat] / category_counts[cat]
+        
+        # Find anomalies (spending > 2x average)
+        anomalies = []
+        for expense in expenses:
+            avg = category_avg.get(expense.category, expense.amount)
+            if expense.amount > avg * 2 and expense.amount > 1000:  # 2x average and >1000
+                anomalies.append({
+                    "id": expense.id,
+                    "description": "AI detected",
+                    "category": expense.category,
+                    "amount": expense.amount,
+                    "date": expense.date,
+                    "reason": f"Spent ₹{expense.amount} which is {round(expense.amount/avg, 1)}x higher than your average of ₹{round(avg, 2)}"
+                })
+        
+        return jsonify({"anomalies": anomalies, "total_anomalies": len(anomalies)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/spending_insights", methods=["GET"])
+def spending_insights():
+    """Get AI-powered spending insights"""
+    try:
+        expenses = Expense.query.all()
+        
+        if not expenses:
+            return jsonify({"message": "No expenses found", "insights": []})
+        
+        # Category breakdown
+        category_spending = {}
+        for expense in expenses:
+            cat = expense.category
+            if cat not in category_spending:
+                category_spending[cat] = 0
+            category_spending[cat] += expense.amount
+        
+        # Find top spending category
+        top_category = max(category_spending, key=category_spending.get)
+        
+        # Calculate monthly average
+        from datetime import datetime, timedelta
+        now = datetime.now()
+        thirty_days_ago = now - timedelta(days=30)
+        
+        recent_total = 0
+        for expense in expenses:
+            expense_date = datetime.strptime(expense.date, "%Y-%m-%d")
+            if expense_date > thirty_days_ago:
+                recent_total += expense.amount
+        
+        insights_list = [
+            f"Your top spending category is {top_category} (₹{category_spending[top_category]:,.2f})",
+            f"You've spent ₹{recent_total:,.2f} in the last 30 days",
+            f"AI confidence in categorizations: {round(sum(e.ai_confidence for e in expenses)/len(expenses)*100)}%",
+        ]
+        
+        # Subscription detection
+        subscriptions = [e for e in expenses if e.is_subscription or "subscription" in e.category.lower()]
+        if subscriptions:
+            insights_list.append(f"Found {len(subscriptions)} potential subscriptions - review them to save money")
+        
+        return jsonify({"insights": insights_list})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+# ---------------- EXPENSE TRACKER (Original) ----------------
 
 @app.route("/add_expense", methods=["POST"])
 def add_expense():

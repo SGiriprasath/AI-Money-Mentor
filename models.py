@@ -15,11 +15,28 @@ class Expense(db.Model):
     category = db.Column(db.String(120), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     date = db.Column(db.String(40), nullable=False)
+    
+    # New AI fields
+    ai_confidence = db.Column(db.Float, default=0.0)  # AI confidence score
+    user_corrected = db.Column(db.Boolean, default=False)  # Was this corrected by user?
+    original_ai_category = db.Column(db.String(120), nullable=True)  # What AI originally said
+    is_subscription = db.Column(db.Boolean, default=False)
+    is_recurring = db.Column(db.Boolean, default=False)
+    is_anomaly = db.Column(db.Boolean, default=False)
+    merchant_name = db.Column(db.String(200), nullable=True)
 
     def to_dict(self):
-        # Matches the original expense dict shape exactly:
-        # {"category", "amount", "date"}  (no id — frontend never used one)
-        return {"category": self.category, "amount": self.amount, "date": self.date}
+        return {
+            "id": self.id,
+            "category": self.category,
+            "amount": self.amount,
+            "date": self.date,
+            "ai_confidence": self.ai_confidence,
+            "user_corrected": self.user_corrected,
+            "is_subscription": self.is_subscription,
+            "is_recurring": self.is_recurring,
+            "is_anomaly": self.is_anomaly
+        }
 
 
 class Asset(db.Model):
