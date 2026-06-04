@@ -250,44 +250,106 @@
       gap: 16px;
     }
 
-    /* ── CHAT ─────────────────────────────────────── */
+    /* ── IMPROVED CHAT STYLES ─────────────────────── */
+    .chat-container {
+      display: flex;
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
     .chat-messages {
-      height: 320px;
+      height: 500px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      padding: 16px;
-      margin-bottom: 18px;
+      gap: 16px;
+      padding: 20px;
       background: linear-gradient(135deg, rgba(20, 200, 191, 0.03) 0%, rgba(212, 168, 67, 0.02) 100%);
       border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 18px;
     }
 
     .msg {
-      max-width: 88%;
-      padding: 12px 16px;
+      max-width: 85%;
+      padding: 16px 20px;
       border-radius: 18px;
-      font-size: 13px;
-      line-height: 1.6;
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 8px;
     }
 
     .msg.user {
-      background: rgba(212, 168, 67, 0.16);
+      background: linear-gradient(135deg, rgba(212, 168, 67, 0.2), rgba(212, 168, 67, 0.1));
       border: 1px solid rgba(212, 168, 67, 0.3);
       align-self: flex-end;
+      border-bottom-right-radius: 4px;
     }
 
     .msg.bot {
-      background: rgba(16, 24, 41, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: linear-gradient(135deg, rgba(16, 24, 41, 0.95), rgba(20, 200, 191, 0.05));
+      border: 1px solid rgba(255, 255, 255, 0.08);
       align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg .sender {
+      font-size: 11px;
+      color: var(--gold);
+      margin-bottom: 8px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .msg .sender .agent-badge {
+      background: rgba(212, 168, 67, 0.2);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      color: var(--gold2);
+    }
+
+    .msg-content {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    /* Formatting for AI responses */
+    .msg-content h1, .msg-content h2, .msg-content h3 {
+      margin: 12px 0 8px 0;
+      color: var(--gold);
+    }
+    .msg-content strong {
+      color: var(--teal);
+    }
+    .msg-content ul, .msg-content ol {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    .msg-content li {
+      margin: 4px 0;
+    }
+    .msg-content p {
+      margin: 8px 0;
+    }
+    .msg-content code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
     }
 
     .chat-input-row {
       display: flex;
       gap: 10px;
-      align-items: center;
+      align-items: flex-end;
+      margin-top: 20px;
     }
 
     .chat-textarea {
@@ -303,6 +365,76 @@
       color: var(--text);
       font-family: inherit;
       font-size: 13px;
+    }
+
+    .quick-questions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+
+    .quick-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .quick-btn:hover {
+      background: rgba(212, 168, 67, 0.2);
+      color: var(--gold);
+      border-color: var(--gold);
+    }
+
+    .agent-status {
+      margin-bottom: 12px;
+    }
+
+    .agent-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .agent-tag-mini {
+      background: rgba(20, 200, 191, 0.1);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      color: var(--teal);
+    }
+
+    .typing-indicator {
+      display: inline-flex;
+      gap: 4px;
+      padding: 12px 16px;
+      background: rgba(16, 24, 41, 0.94);
+      border-radius: 18px;
+      align-self: flex-start;
+    }
+
+    .typing-indicator span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      animation: typing 1.4s infinite;
+    }
+
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-10px); opacity: 1; }
     }
 
     /* ── INPUTS ───────────────────────────────────── */
@@ -414,8 +546,9 @@
 
     /* ── RESPONSIVE ───────────────────────────────── */
     @media (max-width: 800px) {
-      .stats-row, .dash-grid, .bottom-grid {
+      .stats-row, .dash-grid, .bottom-grid, .chat-container {
         grid-template-columns: 1fr;
+        flex-direction: column;
       }
       .sidebar {
         position: fixed;
@@ -460,7 +593,7 @@
       </div>
       <div class="card">
         <div class="card-title">🤖 AI Financial Advisor</div>
-        <div class="chat-messages" id="dashChat"><div class="msg bot">Hi! Ask me anything about finances.</div></div>
+        <div class="chat-messages" id="dashChat" style="height: 320px;"><div class="msg bot"><div class="sender">🤖 AI Advisor</div><div class="msg-content">Hi! Ask me anything about finances.</div></div></div>
         <div class="chat-input-row">
           <textarea id="dashMsg" class="chat-textarea" placeholder="Ask anything..."></textarea>
           <button class="btn btn-gold" onclick="dashSend()">Send</button>
@@ -468,15 +601,80 @@
       </div>
     </div>
 
-    <!-- AI CHAT PAGE -->
+    <!-- IMPROVED AI CHAT PAGE WITH MULTI-AGENT -->
     <div id="chat" class="page">
-      <div class="page-title">🤖 AI <span>Chat</span></div>
-      <div class="card">
-        <div class="chat-messages" id="chatMessages" style="height:400px"><div class="msg bot">Hello! I'm your AI financial advisor. How can I help today?</div></div>
-        <div class="chat-input-row">
-          <textarea id="chatInput" class="chat-textarea" placeholder="Ask any financial question..."></textarea>
-          <button class="btn btn-gold" onclick="chatSend()">Send</button>
-          <button class="btn btn-ghost" onclick="clearChat()">Clear</button>
+      <div class="page-title">🤖 AI <span>Financial Advisor</span></div>
+      
+      <div class="chat-container">
+        <!-- Main Chat Area -->
+        <div class="card" style="flex: 2; display: flex; flex-direction: column;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <span style="font-size: 24px;">💬</span>
+              <span class="card-title" style="margin-bottom: 0;">Conversation</span>
+            </div>
+            <span style="font-size: 11px; color: var(--muted);" id="agentBadge">🤖 Multi-Agent System Active</span>
+          </div>
+          
+          <div class="chat-messages" id="chatMessages">
+            <div class="msg bot">
+              <div class="sender">🤖 AI Financial Advisor <span class="agent-badge">Multi-Agent System</span></div>
+              <div class="msg-content">Hello! I'm your AI financial advisor powered by a specialized multi-agent system. I have experts in:</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;">
+                <span class="agent-tag-mini">💰 Tax Expert</span>
+                <span class="agent-tag-mini">📈 Investment Expert</span>
+                <span class="agent-tag-mini">💳 Debt Expert</span>
+                <span class="agent-tag-mini">👴 Retirement Expert</span>
+                <span class="agent-tag-mini">🛡️ Insurance Expert</span>
+              </div>
+              <div class="msg-content" style="margin-top: 12px;">Ask me anything about your finances! Each question will be routed to the right specialist.</div>
+            </div>
+          </div>
+          
+          <div class="chat-input-wrapper" style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+            <div class="chat-input-row">
+              <textarea id="chatInput" class="chat-textarea" placeholder="Ask about taxes, investments, loans, retirement, insurance..." rows="2"></textarea>
+              <button class="btn btn-gold" onclick="chatSend()" id="chatBtn" style="padding: 12px 24px;">Send ➤</button>
+              <button class="btn btn-ghost" onclick="clearChat()" id="clearBtn">Clear</button>
+            </div>
+            <div class="quick-questions">
+              <button class="quick-btn" onclick="chatQuick('How to save tax under 80C?')">💰 Tax Saving</button>
+              <button class="quick-btn" onclick="chatQuick('Best investment for 5 years with ₹10,000 monthly?')">📊 Investment</button>
+              <button class="quick-btn" onclick="chatQuick('How to improve my CIBIL score from 650?')">💳 Credit Score</button>
+              <button class="quick-btn" onclick="chatQuick('How much corpus needed to retire at 55 with ₹50,000 monthly expenses?')">👴 Retirement</button>
+              <button class="quick-btn" onclick="chatQuick('How much term insurance do I need for ₹15L annual income?')">🛡️ Insurance</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Sidebar - Agent Info -->
+        <div class="card" style="flex: 1;">
+          <div class="card-title">🎯 Active Specialists</div>
+          <div style="margin-bottom: 20px;">
+            <div class="agent-item" style="background: rgba(20,200,191,0.1); border-radius: 8px;">
+              <span>💰</span><span><strong>Tax Agent</strong></span><span style="margin-left: auto; font-size: 11px; color: var(--green);">● Active</span>
+            </div>
+            <div class="agent-item" style="background: rgba(212,168,67,0.1); border-radius: 8px; margin-top: 8px;">
+              <span>📈</span><span><strong>Investment Agent</strong></span><span style="margin-left: auto; font-size: 11px; color: var(--green);">● Active</span>
+            </div>
+            <div class="agent-item" style="background: rgba(46,204,138,0.1); border-radius: 8px; margin-top: 8px;">
+              <span>💳</span><span><strong>Debt Agent</strong></span><span style="margin-left: auto; font-size: 11px; color: var(--green);">● Active</span>
+            </div>
+            <div class="agent-item" style="background: rgba(224,82,82,0.1); border-radius: 8px; margin-top: 8px;">
+              <span>👴</span><span><strong>Retirement Agent</strong></span><span style="margin-left: auto; font-size: 11px; color: var(--green);">● Active</span>
+            </div>
+            <div class="agent-item" style="background: rgba(155,89,182,0.1); border-radius: 8px; margin-top: 8px;">
+              <span>🛡️</span><span><strong>Insurance Agent</strong></span><span style="margin-left: auto; font-size: 11px; color: var(--green);">● Active</span>
+            </div>
+          </div>
+          
+          <div class="card-title">💡 Pro Tips</div>
+          <div style="font-size: 12px; line-height: 1.6; color: var(--muted);">
+            <p style="margin-bottom: 8px;">✨ <strong>Be specific</strong> - Mention amounts, timeframes, and goals</p>
+            <p style="margin-bottom: 8px;">🎯 <strong>Ask follow-ups</strong> - I remember context within the conversation</p>
+            <p style="margin-bottom: 8px;">📊 <strong>Try examples</strong> - "Save tax on ₹15L salary" or "Invest ₹10k monthly"</p>
+            <p>🔄 <strong>Clear chat</strong> - Use the clear button to start fresh</p>
+          </div>
         </div>
       </div>
     </div>
@@ -681,32 +879,110 @@
 
     function fmtNum(n) { return new Intl.NumberFormat('en-IN').format(Math.round(n)); }
 
+    // Format AI response with better readability
+    function formatAIResponse(text) {
+      // Convert markdown-style formatting to HTML
+      let formatted = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+        .replace(/^- (.*?)$/gm, '<li>$1</li>')
+        .replace(/\n/g, '<br>');
+      
+      // Wrap lists
+      if (formatted.includes('<li>')) {
+        formatted = formatted.replace(/<li>.*?<\/li>/gs, match => `<ul>${match}</ul>`);
+      }
+      
+      return formatted;
+    }
+
     // Dashboard Chat
     async function dashSend() {
       const msg = document.getElementById('dashMsg').value;
       if (!msg) return;
       const chatDiv = document.getElementById('dashChat');
-      chatDiv.innerHTML += `<div class="msg user">${msg}</div>`;
+      chatDiv.innerHTML += `<div class="msg user"><div class="sender">You</div><div class="msg-content">${msg}</div></div>`;
       document.getElementById('dashMsg').value = '';
+      
+      // Show typing indicator
+      chatDiv.innerHTML += `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+      
       const data = await apiFetch('/chat', { message: msg });
-      chatDiv.innerHTML += `<div class="msg bot">${data.reply || 'Sorry, error occurred'}</div>`;
+      
+      // Remove typing indicator
+      chatDiv.removeChild(chatDiv.lastChild);
+      
+      const agentInfo = data.agent_used ? `<span class="agent-badge">🎯 ${data.agent_used}</span>` : '';
+      chatDiv.innerHTML += `<div class="msg bot"><div class="sender">🤖 AI Advisor ${agentInfo}</div><div class="msg-content">${formatAIResponse(data.reply || 'Sorry, error occurred')}</div></div>`;
       chatDiv.scrollTop = chatDiv.scrollHeight;
     }
 
-    // Chat Page
+    // Chat Page with Multi-Agent
+    let isTyping = false;
+    
     async function chatSend() {
       const msg = document.getElementById('chatInput').value;
-      if (!msg) return;
+      if (!msg || isTyping) return;
+      
       const chatDiv = document.getElementById('chatMessages');
-      chatDiv.innerHTML += `<div class="msg user">${msg}</div>`;
+      chatDiv.innerHTML += `<div class="msg user"><div class="sender">You</div><div class="msg-content">${msg}</div></div>`;
       document.getElementById('chatInput').value = '';
-      const data = await apiFetch('/chat', { message: msg });
-      chatDiv.innerHTML += `<div class="msg bot">${data.reply || 'Sorry, error occurred'}</div>`;
+      
+      // Show typing indicator
+      isTyping = true;
+      chatDiv.innerHTML += `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
       chatDiv.scrollTop = chatDiv.scrollHeight;
+      
+      try {
+        const data = await apiFetch('/chat', { message: msg });
+        
+        // Remove typing indicator
+        chatDiv.removeChild(chatDiv.lastChild);
+        
+        const agentInfo = data.agent_used ? `<span class="agent-badge">🎯 ${data.agent_used} (${data.specialization || 'Specialist'})</span>` : '';
+        const formattedResponse = formatAIResponse(data.reply || 'Sorry, error occurred');
+        
+        chatDiv.innerHTML += `<div class="msg bot"><div class="sender">🤖 AI Advisor ${agentInfo}</div><div class="msg-content">${formattedResponse}</div></div>`;
+        
+        // Update agent badge in header
+        if (data.agent_used) {
+          document.getElementById('agentBadge').innerHTML = `🎯 Active: ${data.agent_used}`;
+          setTimeout(() => {
+            document.getElementById('agentBadge').innerHTML = '🤖 Multi-Agent System Active';
+          }, 3000);
+        }
+      } catch (error) {
+        chatDiv.removeChild(chatDiv.lastChild);
+        chatDiv.innerHTML += `<div class="msg bot"><div class="sender">🤖 AI Advisor</div><div class="msg-content">Sorry, I encountered an error. Please try again.</div></div>`;
+      }
+      
+      isTyping = false;
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    function chatQuick(text) {
+      document.getElementById('chatInput').value = text;
+      chatSend();
     }
 
     function clearChat() {
-      document.getElementById('chatMessages').innerHTML = '<div class="msg bot">Hello! I\'m your AI financial advisor. How can I help today?</div>';
+      document.getElementById('chatMessages').innerHTML = `
+        <div class="msg bot">
+          <div class="sender">🤖 AI Financial Advisor <span class="agent-badge">Multi-Agent System</span></div>
+          <div class="msg-content">Hello! I'm your AI financial advisor powered by a specialized multi-agent system. I have experts in:</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;">
+            <span class="agent-tag-mini">💰 Tax Expert</span>
+            <span class="agent-tag-mini">📈 Investment Expert</span>
+            <span class="agent-tag-mini">💳 Debt Expert</span>
+            <span class="agent-tag-mini">👴 Retirement Expert</span>
+            <span class="agent-tag-mini">🛡️ Insurance Expert</span>
+          </div>
+          <div class="msg-content" style="margin-top: 12px;">Ask me anything about your finances! Each question will be routed to the right specialist.</div>
+        </div>
+      `;
     }
 
     // Money Score
@@ -763,7 +1039,6 @@
     // ========== AI EXPENSE CATEGORIZATION ==========
     let currentAIPrediction = null;
 
-    // Auto-detect as user types
     document.getElementById('ai_description').addEventListener('input', async function() {
       const desc = this.value.trim();
       if (desc.length < 3) {
@@ -786,7 +1061,6 @@
       } catch(e) { console.error(e); }
     });
 
-    // Add expense with AI
     async function addExpenseWithAI() {
       const description = document.getElementById('ai_description').value;
       const amount = document.getElementById('ai_amount').value;
@@ -816,7 +1090,6 @@
       }
     }
 
-    // Manual expense add
     document.getElementById('expenseForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const category = document.getElementById('category').value;
@@ -835,13 +1108,11 @@
       }
     });
 
-    // Load expenses
     async function loadExpenses() {
       const res = await fetch('/calculate');
       const data = await res.json();
       const expenses = data.expenses || [];
       
-      // Update stats
       let total = 0;
       let aiConfidenceSum = 0;
       let aiCount = 0;
@@ -856,7 +1127,6 @@
       document.getElementById('avgExpense').innerHTML = `₹${fmtNum(expenses.length ? total/expenses.length : 0)}`;
       document.getElementById('aiAccuracy').innerHTML = `${aiCount ? Math.round((aiConfidenceSum/aiCount)*100) : 0}%`;
       
-      // Build table
       const tbody = document.getElementById('expenseTableBody');
       tbody.innerHTML = '';
       expenses.forEach(exp => {
@@ -870,7 +1140,6 @@
         </tr>`;
       });
       
-      // Draw chart
       const categories = data["By Category"] || {};
       const ctx = document.getElementById('expenseChart').getContext('2d');
       if (window.expenseChart) window.expenseChart.destroy();
@@ -880,14 +1149,12 @@
         options: { responsive: true, maintainAspectRatio: true }
       });
       
-      // Load insights
       const insightRes = await fetch('/spending_insights');
       const insightData = await insightRes.json();
       const insightsDiv = document.getElementById('insights');
       insightsDiv.innerHTML = (insightData.insights || []).map(i => `<div class="insight">💡 ${i}</div>`).join('');
     }
 
-    // Detect anomalies
     async function detectAnomalies() {
       const res = await fetch('/anomaly_detection');
       const data = await res.json();
@@ -899,7 +1166,6 @@
       }
     }
 
-    // Net Worth
     async function loadNetWorth() {
       const res = await fetch('/net-worth');
       const data = await res.json();
@@ -916,6 +1182,20 @@
       await fetch(`/add-${type}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, amount }) });
       loadNetWorth();
     }
+
+    // Enter key to send
+    document.getElementById('chatInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatSend();
+      }
+    });
+    document.getElementById('dashMsg').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        dashSend();
+      }
+    });
 
     // Initialize
     loadExpenses();

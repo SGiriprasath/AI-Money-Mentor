@@ -105,34 +105,63 @@ def internal_server_error(error):
     }), 500
 
 
-# ---------------- 🤖 AI CHAT ----------------
+# ---------------- 🤖 MULTI-AGENT AI CHAT ----------------
+from utils.multi_agent_system import MultiAgentRouter
+
+# Initialize multi-agent router
+multi_agent_router = None
+
+def get_router():
+    global multi_agent_router
+    if multi_agent_router is None:
+        multi_agent_router = MultiAgentRouter(client)
+    return multi_agent_router
+
 @app.route("/chat", methods=["POST"])
 def chat():
+    """Multi-agent powered chat with specialized financial advisors"""
     try:
         data = request.json
-        msg = data.get("message")
+        msg = data.get("message", "")
         history = data.get("history", [])
-
-        # Build messages: system prompt + last 10 history turns + current message
-        messages = [{"role": "system", "content": "You are a financial advisor for India."}]
-        messages += history[-10:]
-        messages.append({"role": "user", "content": msg})
-
-        res = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=messages
-        )
-
+        
+        if not msg:
+            return jsonify({"reply": "Please ask a question about your finances."}), 400
+        
+        # Use multi-agent system
+        router = get_router()
+        result = router.process_query(msg, history)
+        
+        # Format response with agent info (optional, can be hidden)
+        reply = result['response']
+        
+        # Uncomment below to show which agent responded (for debugging)
+        # reply = f"**[{result['agent']} - {result['specialization']}]**\n\n{result['response']}"
+        
         return jsonify({
-            "reply": res.choices[0].message.content
+            "reply": reply,
+            "agent_used": result.get('agent', 'AI Advisor'),
+            "specialization": result.get('specialization', 'Finance'),
+            "confidence": result.get('confidence', 0.8)
         })
-
+        
     except Exception as e:
-        app.logger.error(f"Groq API Error: {str(e)}")
-
+        app.logger.error(f"Multi-Agent Chat Error: {str(e)}")
         return jsonify({
-            "reply": "Unable to generate a response at the moment. Please try again later."
-        }), 500
+            "reply": "I'm here to help with your financial questions. Could you please rephrase your question?"
+        }), 200
+
+@app.route("/agent-stats", methods=["GET"])
+def agent_stats():
+    """Get performance statistics for all agents (admin endpoint)"""
+    try:
+        router = get_router()
+        stats = router.get_performance_stats()
+        return jsonify({"success": True, "stats": stats})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 
 
 # ---------------- 💸 SIP ----------------
