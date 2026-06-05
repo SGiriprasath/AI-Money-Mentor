@@ -29,7 +29,6 @@ from utils.money_score import calculate_money_score
 from utils.multi_agent import run_multi_agent
 from utils.stock import get_stock_price
 from utils.expense_track import calculate_expense, insights
-from utils import persistence
 
 app = Flask(__name__)
 
@@ -103,15 +102,28 @@ def internal_server_error(error):
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        msg = request.json.get("message")
+        data = request.json
+        msg = data.get("message")
+        history = data.get("history", [])
+
+        # Build messages: system prompt + last 10 history turns + current message
+        messages = [{"role": "system", "content": "You are a financial advisor for India."}]
+        messages += history[-10:]
+        messages.append({"role": "user", "content": msg})
 
         res = client.chat.completions.create(
+
     model="llama-3.1-8b-instant",
     messages=[
         {
             "role": "system",
             "content": """
 You are an expert AI financial advisor for Indian users.
+
+            model="llama-3.1-8b-instant",
+            messages=messages
+        )
+
 
 Your job:
 - Help users manage money smartly
@@ -145,11 +157,11 @@ Tone:
         })
 
     except Exception as e:
-    	app.logger.error(f"Groq API Error: {str(e)}")
+        app.logger.error(f"Groq API Error: {str(e)}")
 
-    	return jsonify({
-        	"reply": "Unable to generate a response at the moment. Please try again later."
-    	}), 500
+        return jsonify({
+            "reply": "Unable to generate a response at the moment. Please try again later."
+        }), 500
 
 
 # ---------------- 💸 SIP ----------------
@@ -247,27 +259,22 @@ def money_score():
         return jsonify({"error": str(e)})
 
 
-# ---------------- EXPENSE TRACKER ----------------
+# Expense Tracker Features
 
 @app.route("/add_expense", methods=["POST"])
 def add_expense():
     try:
         data = request.json
-        if not data or "category" not in data or "amount" not in data or "date" not in data:
-            return jsonify({"error": "category, amount, and date are required"}), 400
-
-        print("RECEIVED:", data)
-
         expense = Expense(
-            category=str(data["category"]).strip(),
+            category=data["category"],
             amount=float(data["amount"]),
-            date=str(data["date"]).strip()
+            date=data["date"]
         )
         db.session.add(expense)
         db.session.commit()
         return jsonify({"status": "success"})
+
     except Exception as e:
-        print("ERROR:", str(e))
         return jsonify({"error": str(e)}), 400
 
 @app.route("/calculate", methods=["GET"])
@@ -277,15 +284,15 @@ def calculate():
     result["expenses"] = expense_data
     return jsonify(result)
 
-
 @app.route("/insights", methods=["GET"])
 def expense_insights():
     expense_data = [e.to_dict() for e in Expense.query.order_by(Expense.id).all()]
-    result = insights(client, expense_data)
+    result =insights(client,expense_data)
     return jsonify(result)
 
-
 # ---------------- NET WORTH TRACKER ----------------
+# Net Worth Tracker Features
+
 @app.route("/net-worth", methods=["GET", "POST"])
 def get_net_worth():
     assets = Asset.query.order_by(Asset.id).all()
@@ -299,49 +306,37 @@ def get_net_worth():
         "liabilities": liabilities_data,
         "total_assets": total_assets,
         "total_liabilities": total_liabilities,
-        "net_worth": total_assets - total_liabilities,
+        "net_worth": total_assets - total_liabilities
     })
-
 
 @app.route("/add-asset", methods=["POST"])
 def add_asset():
     try:
         data = request.json
-        if not data or "name" not in data or "amount" not in data:
-            return jsonify({"error": "name and amount are required"}), 400
-        asset = Asset(name=str(data["name"]).strip(), amount=float(data["amount"]))
+        asset = Asset(name=data["name"], amount=float(data["amount"]))
         db.session.add(asset)
         db.session.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
 @app.route("/add-liability", methods=["POST"])
 def add_liability():
     try:
         data = request.json
-        if not data or "name" not in data or "amount" not in data:
-            return jsonify({"error": "name and amount are required"}), 400
-        liability = Liability(name=str(data["name"]).strip(), amount=float(data["amount"]))
+        liability = Liability(name=data["name"], amount=float(data["amount"]))
         db.session.add(liability)
         db.session.commit()
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
 @app.route("/delete-item", methods=["POST"])
 def delete_item():
-    """Delete an asset or liability by its stable id (NOT list index).
-
-    Previously this used list.pop(index) which silently corrupted
-    all subsequent indices after the first deletion.
-    """
     try:
         data = request.json
-        item_type = data.get("type") # 'asset' or 'liability'
-        item_id = int(data.get("id")) # positional index from the frontend
+        item_type = data["type"] # 'asset' or 'liability'
+        item_id = int(data["id"]) # positional index from the frontend
 
         if item_type == 'asset':
             rows = Asset.query.order_by(Asset.id).all()
@@ -352,15 +347,13 @@ def delete_item():
 
         db.session.commit()
         return jsonify({"status": "success"})
-    except KeyError as e:
-        return jsonify({"error": str(e)}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "False").lower() in ("true", "1", "yes")
+
     app.run(debug=debug_mode)
 from flask import Flask, render_template
 
@@ -369,3 +362,6 @@ app = Flask(__name__)
 @app.route("/")
 def home():
     return render_template("index.html")
+
+    app.run(debug=debug_mode)
+
