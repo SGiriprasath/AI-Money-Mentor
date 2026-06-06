@@ -125,6 +125,16 @@ class TestEndpointValidation(unittest.TestCase):
         limit_mock = MagicMock()
         limit_mock.limit_amount = 1000.0
         BudgetLimit.query.filter_by.return_value.first.return_value = limit_mock
+        
+        # Setup mock client responses for tax and chat recommendations
+        import sys
+        app_module = sys.modules['app']
+        app_module.client = MagicMock()
+        mock_ai_res = MagicMock()
+        mock_choice = MagicMock()
+        mock_choice.message.content = "Mocked AI recommendation."
+        mock_ai_res.choices = [mock_choice]
+        app_module.client.chat.completions.create.return_value = mock_ai_res
 
     def test_sip_endpoint(self):
         # Valid payload
@@ -284,31 +294,39 @@ class TestEndpointValidation(unittest.TestCase):
         from models import Asset, Liability
         # Setup mock asset and liability queries
         mock_asset = MagicMock()
-        Asset.query.order_by.return_value.all.return_value = [mock_asset]
+        Asset.query.get.return_value = mock_asset
         
         mock_liability = MagicMock()
-        Liability.query.order_by.return_value.all.return_value = [mock_liability]
+        Liability.query.get.return_value = mock_liability
 
         # Valid type and id
         response = self.app.post('/delete-item', json={
             "type": "asset",
-            "id": 0
+            "id": 1
         })
         self.assertEqual(response.status_code, 200)
 
         # Invalid type
         response = self.app.post('/delete-item', json={
             "type": "invalid_type",
+            "id": 1
+        })
+        self.assertEqual(response.status_code, 400)
+
+        # Invalid id (less than 1)
+        response = self.app.post('/delete-item', json={
+            "type": "asset",
             "id": 0
         })
         self.assertEqual(response.status_code, 400)
 
-        # Out-of-bounds id
+        # Item not found (404)
+        Asset.query.get.return_value = None
         response = self.app.post('/delete-item', json={
             "type": "asset",
             "id": 10
         })
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 404)
 
     def test_budget_limits_endpoint(self):
 

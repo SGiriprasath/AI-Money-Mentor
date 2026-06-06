@@ -8,9 +8,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file (if present)
 load_dotenv()
 
-# ── Startup validation ───────────────────────────────────────
-# Fail fast and clearly if the required API key is missing.
-# Copy .env.example → .env and set your GROQ_API_KEY.
+# Log a warning to console if API key is missing, enabling offline mode.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY or GROQ_API_KEY.strip() in ("", "your_groq_api_key_here"):
     print(
@@ -157,34 +155,28 @@ def chat():
             raise ValidationError("'history' must be a list")
 
         # Build messages: system prompt + last 10 history turns + current message
-        system_content = """You are an expert AI financial advisor for Indian users.
-
-Your job:
-- Help users manage money smartly
-- Teach budgeting, saving, and investing
-- Give simple, practical, real-life advice
-
-Response rules:
-- Always use structured format:
-
-Income / Situation Summary:
-- ...
-
-Budget Breakdown (if applicable):
-- Needs: 50%
-- Wants: 30%
-- Savings: 20%
-
-Advice:
-- Give clear steps
-- Keep it simple and actionable
-
-Tone:
-- Friendly, practical, and easy to understand"""
-
-        messages = [{"role": "system", "content": system_content}]
-        for h in history[-10:]:
-            messages.append({"role": h.get("role", "user"), "content": h.get("content", "")})
+        system_prompt = (
+            "You are an expert AI financial advisor for Indian users.\n\n"
+            "Your job:\n"
+            "- Help users manage money smartly\n"
+            "- Teach budgeting, saving, and investing\n"
+            "- Give simple, practical, real-life advice\n\n"
+            "Response rules:\n"
+            "- Always use structured format:\n"
+            "Income / Situation Summary:\n"
+            "- ...\n"
+            "Budget Breakdown (if applicable):\n"
+            "- Needs: 50%\n"
+            "- Wants: 30%\n"
+            "- Savings: 20%\n"
+            "Advice:\n"
+            "- Give clear steps\n"
+            "- Keep it simple and actionable\n\n"
+            "Tone:\n"
+            "- Friendly, practical, and easy to understand"
+        )
+        messages = [{"role": "system", "content": system_prompt}]
+        messages += history[-10:]
         messages.append({"role": "user", "content": msg})
 
         res = client.chat.completions.create(
@@ -230,7 +222,7 @@ def sip():
     except ValidationError as e:
         raise e
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 400
 
 
 # ---------------- 📊 STOCK ----------------
@@ -249,7 +241,7 @@ def portfolio():
     except ValidationError as e:
         raise e
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 400
     
 # ---------------- 💸 TAX ----------------
 @app.route("/tax", methods=["GET", "POST"])
@@ -265,18 +257,52 @@ def tax():
         deduction_80d = validate_float(data.get("deduction_80d", 0.0), "deduction_80d", min_val=0.0)
         deduction_hra = validate_float(data.get("deduction_hra", 0.0), "deduction_hra", min_val=0.0)
         
-        result = calculate_tax(
+        tax_details = calculate_tax(
             income,
             deduction_80c=deduction_80c,
             deduction_80d=deduction_80d,
             deduction_hra=deduction_hra
         )
-        return jsonify({"tax": result})
+        
+        # AI Tax-saving advice
+        recommendations = "You are already in the zero-tax bracket! No additional tax-saving investments are required."
+        
+        recommended_regime = tax_details.get("recommended", "New Regime")
+        regime_key = "new_regime" if recommended_regime == "New Regime" else "old_regime"
+        total_tax = tax_details.get(regime_key, {}).get("total_tax", 0.0)
+        
+        # Only query AI if there is actual tax payable and client is available
+        if total_tax > 0.0 and client:
+            prompt = (
+                f"A user in India has a gross annual income of ₹{income:,} and has a total tax liability of "
+                f"₹{total_tax:,} under the recommended {recommended_regime}.\n\n"
+                f"Generate a customized list of tax-saving investment recommendations for them. "
+                f"Suggest specific options under Section 80C (up to 1.5L, e.g. ELSS, PPF), Section 80CCD(1B) (up to 50k in NPS), "
+                f"and Section 80D (Health Insurance). Be brief and format the response as a bulleted list with clear estimated tax savings."
+            )
+            
+            try:
+                ai_res = client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=[
+                        {"role": "system", "content": "You are a professional Indian tax consultant. Give brief, actionable advice."},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                recommendations = ai_res.choices[0].message.content.strip()
+            except Exception as ai_err:
+                app.logger.error(f"Tax AI Recommendation Error: {str(ai_err)}")
+                recommendations = "AI Tax recommendations are currently unavailable. Consider investing in ELSS or NPS to reduce your tax."
+        elif total_tax > 0.0:
+            recommendations = "AI Tax recommendations are currently offline (no GROQ_API_KEY configured). Consider investing in ELSS or NPS to reduce your tax."
+                
+        tax_details["ai_recommendations"] = recommendations
+        return jsonify({"tax": tax_details})
 
     except ValidationError as e:
         raise e
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 400
 
 
 # ---------------- 📄 PDF ----------------
@@ -288,7 +314,7 @@ def upload():
         return jsonify({"data": result})
 
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 400
 
 
 # ---------------- 🧠 MULTI AGENT ----------------
@@ -309,7 +335,7 @@ def run_agent_route():
     except ValidationError as e:
         raise e
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 400
 
 
 # ---------------- 💰 MONEY SCORE ----------------
@@ -348,7 +374,7 @@ def money_score():
     except ValidationError as e:
         raise e
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 400
 
 
 # Expense Tracker Features
@@ -392,6 +418,13 @@ def calculate():
 @app.route("/insights", methods=["GET"])
 def expense_insights():
     expense_data = [e.to_dict() for e in Expense.query.order_by(Expense.id).all()]
+    if not client:
+        # Calculate standard expenses metrics but return fallback AI insights content
+        totals = calculate_expense(expense_data)
+        return jsonify({
+            "insights": "<div class=\"insight-card\"><h3>AI Insights Offline</h3><p>Personalized AI savings suggestions are currently offline because the GROQ_API_KEY is not configured on the server. Please configure it to enable insights.</p></div>",
+            "summary": totals
+        })
     result = insights(client, expense_data)
     return jsonify(result)
 
@@ -459,19 +492,17 @@ def delete_item():
         item_type = validate_string(data.get("type"), "type")
         if item_type not in ('asset', 'liability'):
             raise ValidationError("'type' must be either 'asset' or 'liability'")
-        item_id = validate_int(data.get("id"), "id", min_val=0)
+        item_db_id = validate_int(data.get("id"), "id", min_val=1)
 
-        if item_type == 'asset':
-            rows = Asset.query.order_by(Asset.id).all()
-            if item_id >= len(rows):
-                raise ValidationError("Invalid asset ID")
-            db.session.delete(rows[item_id])
+        if item_type == "asset":
+            item = Asset.query.get(item_db_id)
         else:
-            rows = Liability.query.order_by(Liability.id).all()
-            if item_id >= len(rows):
-                raise ValidationError("Invalid liability ID")
-            db.session.delete(rows[item_id])
+            item = Liability.query.get(item_db_id)
 
+        if not item:
+            return jsonify({"error": f"Item not found (type={item_type}, id={item_db_id})"}), 404
+
+        db.session.delete(item)
         db.session.commit()
         return jsonify({"status": "success"})
     except ValidationError as e:
