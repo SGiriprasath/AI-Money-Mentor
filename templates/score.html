@@ -60,9 +60,16 @@
       showResult('scoreResult','Inputs cannot be negative.');
       return;
     }
-    if (expenses>=income && savings>0){
-      showResult('scoreResult','Savings cannot be there when expenses equal or exceed income.');
-      return;
+    if (expenses>=income){
+      if (savings>0){
+        showResult('scoreResult','Savings cannot be there when expenses equal or exceed income.');
+        return;
+      }
+    }else{
+      if ((savings+expenses)>income){
+        showResult('scoreResult','The sum of Savings and Expenses could not exceed the income.');
+        return;
+      }
     }
 
     setLoading('scoreBtn', true);
