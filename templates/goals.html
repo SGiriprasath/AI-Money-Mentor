@@ -9,7 +9,7 @@
   <div class="dash-grid" style="grid-template-columns: 1fr; margin-bottom: 20px;">
     <div class="card">
       <div class="card-title">Add New Goal</div>
-      <div class="chat-input-row" style="gap: 10px;">
+      <div class="goals-input-row">
         <input type="text" id="goalName" placeholder="Goal name (e.g., Emergency Fund)" style="flex: 2;">
         <input type="number" id="goalTarget" placeholder="Target amount (₹)" min="0" step="0.01" style="flex: 1;">
         <input type="number" id="goalCurrent" placeholder="Current saved (₹)" min="0" step="0.01" style="flex: 1;" value="0">
@@ -19,7 +19,7 @@
     </div>
   </div>
 
-  <div id="goalsList" class="dash-grid"></div>
+  <div id="goalsList" class="goals-grid"></div>
 </div>
 {% endblock %}
 
